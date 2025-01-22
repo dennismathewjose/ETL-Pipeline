@@ -1,0 +1,74 @@
+version: '3'
+services:
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka-container
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    networks:
+      - spark-network
+    restart: always
+    command: /bin/bash -c "sleep 30 && /opt/bitnami/scripts/kafka/entrypoint.sh /run.sh"
+ 
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper-container
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    networks:
+      - spark-network
+    restart: always
+ 
+  spark:
+    image: bitnami/spark:latest
+    container_name: spark-container
+    volumes:
+      - ./service_account_detail.json:/app/service_account_detail.json
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: "/app/service_account_detail.json"
+    depends_on:
+      - kafka  # Spark depends on Kafka
+    networks:
+      - spark-network
+    command: "/bin/bash -c 'sleep 10 && /opt/bitnami/scripts/spark/entrypoint.sh /run.sh'"  # Allow Kafka to initialize
+ 
+  producer:
+    build: .
+    container_name: producer-container
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: "/app/service_account_detail.json"
+    volumes:
+      - ./service_account_detail.json:/app/service_account_detail.json
+    command: ["python", "/app/kafka_producer.py"]
+    depends_on:
+      - kafka  # Producer starts after Kafka
+    networks:
+      - spark-network
+ 
+  consumer:
+    build: .
+    container_name: consumer-container
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: "/app/service_account_detail.json"
+    volumes:
+      - ./service_account_detail.json:/app/service_account_detail.json
+    command: >
+      bash -c "
+       until python -c 'import socket; socket.create_connection((\"kafka\", 9092))'; do
+        echo 'Waiting for Kafka to be ready...';
+        sleep 2;
+      done;
+      python /app/Kafka_Consumer.py
+      "
+    depends_on:
+      - kafka  # Consumer starts after Kafka
+    networks:
+      - spark-network
+ 
+networks:
+  spark-network:
+    driver: bridge
