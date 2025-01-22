@@ -3,3 +3,5 @@
 *.csv
 # Ignore the service account JSON file
 service_account_detail.json
+
+kafka_spark_env/
