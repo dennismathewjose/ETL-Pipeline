@@ -1,0 +1,2 @@
+*.csv filter=lfs diff=lfs merge=lfs -text
+service_account_detail.json filter=lfs diff=lfs merge=lfs -text
