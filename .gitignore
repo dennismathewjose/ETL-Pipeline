@@ -1,0 +1,3 @@
+*.csv
+*.logs
+service_account_detail.json
