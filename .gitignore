@@ -1,3 +1,5 @@
+# Ignore CSV files
+/Users/dennis_m_jose/Downloads/RealTimeNYCData/ProjectFiiles/nyc_taxi_data.csv
 *.csv
-*.logs
+# Ignore the service account JSON file
 service_account_detail.json
