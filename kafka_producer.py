@@ -14,7 +14,6 @@ client = bigquery.Client()
 # BigQuery SQL query
 query = """
 SELECT * FROM `fourth-stock-447916-u1.NYC_TaxiData.nyc-taxi-data-table`
-LIMIT 100
 """
 
 #Test 

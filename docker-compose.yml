@@ -56,19 +56,17 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: "/app/service_account_detail.json"
     volumes:
       - ./service_account_detail.json:/app/service_account_detail.json
+      - ./wait_for_kafka.py:/app/wait_for_kafka.py  # Mount the new wait_for_kafka.py script
     command: >
       bash -c "
-       until python -c 'import socket; socket.create_connection((\"kafka\", 9092))'; do
-        echo 'Waiting for Kafka to be ready...';
-        sleep 2;
-      done;
-      python /app/Kafka_Consumer.py
+        python /app/wait_for_kafka.py &&  # First run the waiting script
+        python /app/Kafka_Consumer.py  # Then run the Kafka consumer script
       "
     depends_on:
       - kafka  # Consumer starts after Kafka
     networks:
       - spark-network
- 
+
 networks:
   spark-network:
     driver: bridge
