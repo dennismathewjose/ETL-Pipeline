@@ -1,24 +1,24 @@
-from google.cloud import bigquery
- 
-# Instantiate the BigQuery client
-client = bigquery.Client()
- 
-# Corrected query using valid columns from the Shakespeare dataset
-query = """
-    SELECT corpus, word_count
-    FROM `bigquery-public-data.samples.shakespeare`
-    LIMIT 5
-"""
- 
-# Run the query
-query_job = client.query(query)
- 
-# Wait for the job to finish
-results = query_job.result()
- 
-# Check if results are returned and print them
-if results.total_rows > 0:
-    for row in results:
-        print(f"{row['corpus']}: {row['word_count']}")
-else:
-    print("No results found.")
+from pyspark.sql import SparkSession
+
+# Initialize Spark Session with BigQuery Connector
+spark = SparkSession.builder.master("local[*]") \
+    .appName("BigQueryTest") \
+    .config("spark.jars.packages", "com.google.cloud.spark:spark-3.5-bigquery:0.41.1") \
+    .config("temporaryGcsBucket", "nyc-taxidata-bucket") \
+    .getOrCreate()
+
+# Create a simple DataFrame
+df_test = spark.createDataFrame(
+    [(2023, 10, 5.5, 100.0, 10, 2.5)],
+    ["year", "month", "avg_trip_distance", "total_revenue", "total_trips", "avg_passenger_count"]
+)
+
+# Write the DataFrame to BigQuery
+df_test.write \
+    .format("bigquery") \
+    .option("table", "your-project-id.your_dataset.your_table") \
+    .option("temporaryGcsBucket", "nyc-taxidata-bucket") \
+    .mode("append") \
+    .save()
+
+print("Data successfully written to BigQuery!")

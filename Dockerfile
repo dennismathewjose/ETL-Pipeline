@@ -15,6 +15,7 @@ COPY ./service_account_detail.json /app/service_account_detail.json
 COPY ./kafka_producer.py /app/kafka_producer.py
 COPY ./Kafka_Consumer.py /app/Kafka_Consumer.py
 COPY ./wait_for_kafka.py /app/wait_for_kafka.py
+COPY ./test_bigquery.py /app/test_bigquery.py
 
 # Set working directory
 WORKDIR /app

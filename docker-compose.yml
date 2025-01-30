@@ -24,17 +24,21 @@ services:
     restart: always
  
   spark:
-    image: bitnami/spark:latest
+    image: bitnami/spark:3.5.4
     container_name: spark-container
     volumes:
-      - ./service_account_detail.json:/app/service_account_detail.json
+      - ./service_account_detail.json.json:/app/service_account_detail.json
+      - ./jars/spark-3.5-bigquery-0.41.1.jar:/opt/bitnami/spark/jars/spark-3.5-bigquery-0.41.1.jar
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: "/app/service_account_detail.json"
     depends_on:
-      - kafka  # Spark depends on Kafka
+      - kafka
     networks:
       - spark-network
-    command: "/bin/bash -c 'sleep 10 && /opt/bitnami/scripts/spark/entrypoint.sh /run.sh'"  # Allow Kafka to initialize
+    command: >
+      spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.4
+      com.google.cloud.spark:spark-3.5-bigquery:0.41.1
+      /app/Kafka_Consumer.py
  
   producer:
     build: .
@@ -61,6 +65,7 @@ services:
       bash -c "
         python /app/wait_for_kafka.py &&  # First run the waiting script
         python /app/Kafka_Consumer.py  # Then run the Kafka consumer script
+        python /app/test_bigquery.py
       "
     depends_on:
       - kafka  # Consumer starts after Kafka
