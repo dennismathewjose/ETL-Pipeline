@@ -10,8 +10,9 @@ services:
     networks:
       - spark-network
     restart: always
-    command: /bin/bash -c "sleep 30 && /opt/bitnami/scripts/kafka/entrypoint.sh /run.sh"
- 
+    command: /opt/bitnami/scripts/kafka/entrypoint.sh /run.sh
+
+
   zookeeper:
     image: bitnami/zookeeper:latest
     container_name: zookeeper-container
@@ -22,37 +23,34 @@ services:
     networks:
       - spark-network
     restart: always
- 
+
   spark:
-    image: bitnami/spark:3.5.4
+    image: bitnami/spark:3.4.0
     container_name: spark-container
     volumes:
-      - ./service_account_detail.json.json:/app/service_account_detail.json
-      - ./jars/spark-3.5-bigquery-0.41.1.jar:/opt/bitnami/spark/jars/spark-3.5-bigquery-0.41.1.jar
+      - ./service_account_detail.json:/app/service_account_detail.json
+      - ./Kafka_Consumer.py:/app/Kafka_Consumer.py
+      - ./jars/gcs-connector-hadoop3-2.2.0.jar:/opt/bitnami/spark/jars/gcs-connector-hadoop3-2.2.0.jar
+      - ./jars/google-http-client-1.42.2.jar:/opt/bitnami/spark/jars/google-http-client-1.42.2.jar
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: "/app/service_account_detail.json"
+      SPARK_HADOOP_FS_GS_IMPL: "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem"
+      SPARK_HADOOP_GOOGLE_CLOUD_AUTH_SERVICE_ACCOUNT_ENABLE: "true"
+      SPARK_HADOOP_GOOGLE_CLOUD_AUTH_SERVICE_ACCOUNT_JSON_KEYFILE: "/app/service_account_detail.json"
     depends_on:
       - kafka
     networks:
       - spark-network
     command: >
-      spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.4
-      com.google.cloud.spark:spark-3.5-bigquery:0.41.1
+      spark-submit 
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0,com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.28.0,com.google.cloud.bigdataoss:gcs-connector:hadoop3-2.2.0,com.google.guava:guava:31.0.1-jre,com.google.http-client:google-http-client:1.42.2
+      --exclude-packages com.google.protobuf:protobuf-java,com.google.guava:guava
+      --conf spark.hadoop.fs.gs.impl=com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem
+      --conf spark.hadoop.google.cloud.auth.service.account.enable=true
+      --conf spark.hadoop.google.cloud.auth.service.account.json.keyfile=/app/service_account_detail.json
+      --conf spark.hadoop.fs.AbstractFileSystem.gs.impl=com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS
       /app/Kafka_Consumer.py
- 
-  producer:
-    build: .
-    container_name: producer-container
-    environment:
-      GOOGLE_APPLICATION_CREDENTIALS: "/app/service_account_detail.json"
-    volumes:
-      - ./service_account_detail.json:/app/service_account_detail.json
-    command: ["python", "/app/kafka_producer.py"]
-    depends_on:
-      - kafka  # Producer starts after Kafka
-    networks:
-      - spark-network
- 
+
   consumer:
     build: .
     container_name: consumer-container
@@ -60,12 +58,10 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: "/app/service_account_detail.json"
     volumes:
       - ./service_account_detail.json:/app/service_account_detail.json
-      - ./wait_for_kafka.py:/app/wait_for_kafka.py  # Mount the new wait_for_kafka.py script
     command: >
       bash -c "
         python /app/wait_for_kafka.py &&  # First run the waiting script
         python /app/Kafka_Consumer.py  # Then run the Kafka consumer script
-        python /app/test_bigquery.py
       "
     depends_on:
       - kafka  # Consumer starts after Kafka

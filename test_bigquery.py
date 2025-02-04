@@ -16,7 +16,7 @@ df_test = spark.createDataFrame(
 # Write the DataFrame to BigQuery
 df_test.write \
     .format("bigquery") \
-    .option("table", "your-project-id.your_dataset.your_table") \
+    .option("table", "fourth-stock-447916-u1.NYC_TaxiData.nyc-taxi-data-transformed") \
     .option("temporaryGcsBucket", "nyc-taxidata-bucket") \
     .mode("append") \
     .save()
